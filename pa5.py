@@ -1,15 +1,14 @@
 import json
+import heapq
 from collections import namedtuple
 
 from math import sqrt
-import pa5_queve
 with open('Crafting.json') as f:
 	Crafting = json.load(f)
 
 class Queve:
 
 	def __init__(self):
-		print "calling initialize "
 		self.elements = []
 
 	def empty(self):
@@ -31,12 +30,15 @@ def make_initial_state(inventory):
 intitial_state = make_initial_state(Crafting['Initial'])
 
 def make_goal_checker(goal):
-	print goal
-
 
 	def is_goal(state):
 
-		return True
+
+
+		if goal == state:
+			return True
+		else:
+			return False
 
 	return is_goal
 
@@ -53,8 +55,6 @@ def inventory_to_frozenset(inventory):
 # of required items to create that specific item
 # if any
 def make_checker(rule):
-	# consumed = ""
-	# required = ""
 
 	consumes = {}
 	required = {}
@@ -84,7 +84,6 @@ def make_checker(rule):
 					return False
 			else:
 				return False
-
 		return True
 
 
@@ -107,11 +106,14 @@ def make_effector(rule):
 	# consumed and adding the newly  produced item if any 
 	def effect(state):
 		# next_state = update_inventory(state, consumes,produces)
+		next_state = update_inventory(state, consumes,produces)
 
-		return update_inventory(state, consumes,produces)
+		return next_state
 
 	return effect
 
+# updates inventory by removing the specified inventory and adding
+# the specified inventory
 def update_inventory(state, rem_inventory, add_inventory):
 	next_state = state
 	
@@ -121,46 +123,53 @@ def update_inventory(state, rem_inventory, add_inventory):
 		if next_state[name] == 0:
 			next_state.pop(name,None)
 
-	next_state.update(add_inventory)
+	for name,quantity in add_inventory.items():
+		if name not in next_state:
+			next_state.update(add_inventory)
+		else:
+			next_state[name] =  next_state[name] +  quantity
 	return next_state
 
 
 # uses dikstra
 def search(graph, initial, is_goal, limit, heuristic):
+
 	plan = {}
 	visited_states = []
 	prev = {}
 	total_cost = {}
 	queve = Queve()
-
 	start_state_h = inventory_to_tuple(initial)
 
 	# stores the initial cost and any possible previous state
 	prev[start_state_h] = 0
 	total_cost[start_state_h] = 0
+	queve.put(initial,0)
 
-	while not queve.empty():
+	while not queve.empty() and limit > 0:
+		limit -= 1
 
-		current_state_h = queve.get()
-		current_state_f = inventory_to_frozenset(current_state_h)
+		current_state = queve.get()
+		current_state_t = inventory_to_tuple(current_state)
+		# print "current state" , current_state
 
 
-		# if is_goal(current_state_f):
-		# 	print "reached goal!! "
-		# 	break
+		if is_goal(current_state):
+			print "reached goal!! "
+			break
 
 		# returns a list of possible states 
-		possible_states =  graph(current_state_f)
+		possible_states =  graph(current_state)
 
-		for v in possible_states:
-
-			alt = cost[current_state_h] +  heuristic(v)
-			v_h = inventory_to_tuple(v)
-			if v_h not in cost or alt < cost[v_h]:
-				priority = cost + heuristic(v)
-				prev[v_h] = current_state_f
-				cost[v_h] = alt
-				queve.put(v_h,priority)
+		for v_name,v_state,v_cost in possible_states:
+			alt = total_cost[current_state_t] + v_cost 
+			v_t = inventory_to_tuple(v_state)
+			if v_t not in total_cost or alt < total_cost[v_t]:
+				priority = alt + heuristic(v_state)
+				prev[v_t] = current_state
+				total_cost[v_t] = alt
+				queve.put(v_state,priority)
+		print 
 
 
 
@@ -169,11 +178,15 @@ def search(graph, initial, is_goal, limit, heuristic):
 
 
 def graph(state):
-	print "in graph"
+	# next_state = state
+	# possible_states = []
+
 	for r in all_recipes:
-		print r.check(state)
 		if r.check(state):
-			yield (r.name, r.effect(state), r.cost)
+			next_state = r.effect(state)
+			print "next state ",  next_state
+
+			yield (r.name, next_state, r.cost)
 
 def heuristic(next_state):
 	return 0
@@ -184,10 +197,15 @@ def main():
 	# state_dict = {'cobble': 3} 
 	# state_dict.update( {'bench': 3} )
 	# state_dict.update( {'stick': 3} )
+
+	# h =  inventory_to_tuple(state_dict)
+	# print h
+	# b = inventory_to_frozenset(state_dict)
+	# print b
 	# generated_list = graph(state_dict)
 	# for n in generated_list:
 	# 	print " printing list: ", n
-	search(graph, intitial_state,is_goal,1000,heuristic)
+	search(graph, intitial_state,is_goal,10,heuristic)
 
 
 
