@@ -139,7 +139,9 @@ def search(graph, initial, is_goal, limit, heuristic):
 
 	plan = []
 	visited_states = []
-	state_name = {}
+	
+	# used to check if a plan was found
+	found = False	
 	cost = {}
 	prev = {}
 	queve = Queve()
@@ -161,6 +163,7 @@ def search(graph, initial, is_goal, limit, heuristic):
 
 		if is_goal(current_state):
 			print "reached goal!! "
+			found = True
 			break
 
 		# returns a list of possible states 
@@ -173,7 +176,6 @@ def search(graph, initial, is_goal, limit, heuristic):
 			if v_t not in cost or alt < cost[v_t]:
 				priority = alt + heuristic(v_state)
 				prev[v_t] = current_state
-				state_name[v_t] = v_name
 				cost[v_t] = alt
 				queve.put(v_state,priority)
 
@@ -182,13 +184,13 @@ def search(graph, initial, is_goal, limit, heuristic):
 	# fprward search
 	total_cost = cost[current_state_t]
 	if is_goal(current_state):
-		
+
 		while  prev[current_state_t] != None:
 			plan.append(current_state)
 			current_state = prev[current_state_t]
 			current_state_t = inventory_to_tuple(current_state)
 
-	return total_cost, plan
+	return total_cost, plan, found
 
 
 def graph(state):
@@ -203,12 +205,17 @@ def heuristic(next_state):
 	return 0
 
 def main():
-	total_cost, plan = search(graph, intitial_state,is_goal,1000,heuristic)
 	
-	if intitial_state == {}:
+	# begins the search using A* as the search algorithim 
+	total_cost, plan ,found = search(graph, intitial_state,is_goal,1000,heuristic)
+	
+
+	if intitial_state == {} and found:
 		print "Achieve ", Crafting['Goal'], "from scratch. [cost=",total_cost,", len=",len(plan),"]"
-	elif plan == {}:
+	# if there was not plan found then found will be False 
+	elif not found:
 		print "Achieving ", Crafting['Goal'], "was not possible from ", intitial_state
+	# if there was a given initial state that is no empty (not yet impleented), then 
 	else:
 		print "Given ", intitial_state, " achieve ", Crafting['Goal'], "[cost=", total_cost, " len=",len(plan), "]"
 
