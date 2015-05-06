@@ -1,5 +1,6 @@
 import json
 import heapq
+import copy
 from collections import namedtuple
 
 from math import sqrt
@@ -31,15 +32,16 @@ intitial_state = make_initial_state(Crafting['Initial'])
 
 def make_goal_checker(goal):
 
+	# checks if the current state satisfies the goal state, first it checks if the current 
+	# state contains the goal item, if it does it then checks if it contains a specified quantity 
 	def is_goal(state):
-
-
-
-		if goal == state:
-			return True
-		else:
-			return False
-
+		for name,quantity in goal.items():
+			if name in state:
+				if quantity > state[name]:
+					return False
+			else:
+				return False
+		return True
 	return is_goal
 
 is_goal = make_goal_checker(Crafting['Goal'])
@@ -115,7 +117,8 @@ def make_effector(rule):
 # updates inventory by removing the specified inventory and adding
 # the specified inventory
 def update_inventory(state, rem_inventory, add_inventory):
-	next_state = state
+	
+	next_state = copy.deepcopy(state)
 	
 	for name,quantity in rem_inventory.items():
 		next_state[name] =  next_state[name] - quantity
@@ -134,16 +137,20 @@ def update_inventory(state, rem_inventory, add_inventory):
 # uses dikstra
 def search(graph, initial, is_goal, limit, heuristic):
 
-	plan = {}
+	plan = []
 	visited_states = []
+	
+	# used to check if a plan was found
+	found = False	
+	cost = {}
 	prev = {}
-	total_cost = {}
 	queve = Queve()
 	start_state_h = inventory_to_tuple(initial)
 
 	# stores the initial cost and any possible previous state
-	prev[start_state_h] = 0
-	total_cost[start_state_h] = 0
+	total_cost = 0
+	prev[start_state_h] = None
+	cost[start_state_h] = 0
 	queve.put(initial,0)
 
 	while not queve.empty() and limit > 0:
@@ -156,56 +163,62 @@ def search(graph, initial, is_goal, limit, heuristic):
 
 		if is_goal(current_state):
 			print "reached goal!! "
+			found = True
 			break
 
 		# returns a list of possible states 
 		possible_states =  graph(current_state)
 
+		# retrieves the name , state and the cost of state
 		for v_name,v_state,v_cost in possible_states:
-			alt = total_cost[current_state_t] + v_cost 
+			alt = cost[current_state_t] + v_cost 
 			v_t = inventory_to_tuple(v_state)
-			if v_t not in total_cost or alt < total_cost[v_t]:
+			if v_t not in cost or alt < cost[v_t]:
 				priority = alt + heuristic(v_state)
 				prev[v_t] = current_state
-				total_cost[v_t] = alt
+				cost[v_t] = alt
 				queve.put(v_state,priority)
-		print 
 
+	
+	# if goal is reached then it creates the plan determined by the 
+	# fprward search
+	total_cost = cost[current_state_t]
+	if is_goal(current_state):
 
+		while  prev[current_state_t] != None:
+			plan.append(current_state)
+			current_state = prev[current_state_t]
+			current_state_t = inventory_to_tuple(current_state)
 
-
-	return total_cost, plan
+	return total_cost, plan, found
 
 
 def graph(state):
-	# next_state = state
-	# possible_states = []
 
 	for r in all_recipes:
 		if r.check(state):
-			next_state = r.effect(state)
-			print "next state ",  next_state
 
-			yield (r.name, next_state, r.cost)
+			yield (r.name, r.effect(state), r.cost)
 
 def heuristic(next_state):
+
 	return 0
 
 def main():
-	# state_dict = {'coal': 5, 'stick': 3}
-	# state_dict = {}
-	# state_dict = {'cobble': 3} 
-	# state_dict.update( {'bench': 3} )
-	# state_dict.update( {'stick': 3} )
+	
+	# begins the search using A* as the search algorithim 
+	total_cost, plan ,found = search(graph, intitial_state,is_goal,1000,heuristic)
+	
 
-	# h =  inventory_to_tuple(state_dict)
-	# print h
-	# b = inventory_to_frozenset(state_dict)
-	# print b
-	# generated_list = graph(state_dict)
-	# for n in generated_list:
-	# 	print " printing list: ", n
-	search(graph, intitial_state,is_goal,10,heuristic)
+	if intitial_state == {} and found:
+		print "Achieve ", Crafting['Goal'], "from scratch. [cost=",total_cost,", len=",len(plan),"]"
+	# if there was not plan found then found will be False 
+	elif not found:
+		print "Achieving ", Crafting['Goal'], "was not possible from ", intitial_state
+	# if there was a given initial state that is no empty (not yet impleented), then 
+	else:
+		print "Given ", intitial_state, " achieve ", Crafting['Goal'], "[cost=", total_cost, " len=",len(plan), "]"
+
 
 
 
