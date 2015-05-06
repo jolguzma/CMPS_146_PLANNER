@@ -21,6 +21,17 @@ class Queve:
 	def get(self):
 		return heapq.heappop(self.elements)[1]
 
+def make_item_list(crafting_items):
+	index_of_items = {}
+	count = 0
+	for item in crafting_items:
+		index_of_items[item] = count
+		count += 1
+	return index_of_items
+
+item_index = make_item_list( Crafting['Items'])
+
+
 # returns the initial state of the search
 
 def make_initial_state(inventory):
@@ -32,16 +43,17 @@ intitial_state = make_initial_state(Crafting['Initial'])
 
 def make_goal_checker(goal):
 
-	# checks if the current state satisfies the goal state, first it checks if the current 
-	# state contains the goal item, if it does it then checks if it contains a specified quantity 
 	def is_goal(state):
-		for name,quantity in goal.items():
-			if name in state:
-				if quantity > state[name]:
+
+		for thing in goal:
+			if thing in state:
+				if state[thing] < goal[thing]:
 					return False
 			else:
 				return False
+
 		return True
+
 	return is_goal
 
 is_goal = make_goal_checker(Crafting['Goal'])
@@ -51,6 +63,17 @@ def inventory_to_tuple(inventory):
 
 def inventory_to_frozenset(inventory):
 	return frozenset(inventory.items())
+	
+def tuple_to_inventory(tuple):
+	inventory = {}
+	
+def tuple_to_inventory(t):
+	inventory = {}
+	for i, name in enumerate(Items):
+		if t[i] != 0:
+			inventory[name] = t[i]
+	return inventory
+	
 
 
 # creates a list of consumed items and a list
@@ -69,6 +92,7 @@ def make_checker(rule):
 	# stores any required items 
 	if "Requires" in rule:
 		required =  rule['Requires']
+
 
 	# checks if the state satisfies the necessary items that are 
 	# consumed and checks if there is a required item that it is
@@ -117,7 +141,6 @@ def make_effector(rule):
 # updates inventory by removing the specified inventory and adding
 # the specified inventory
 def update_inventory(state, rem_inventory, add_inventory):
-	
 	next_state = copy.deepcopy(state)
 	
 	for name,quantity in rem_inventory.items():
@@ -137,79 +160,78 @@ def update_inventory(state, rem_inventory, add_inventory):
 # uses dikstra
 def search(graph, initial, is_goal, limit, heuristic):
 
-	plan = []
+#for each goal item I have, subtract that off of my goal???
+
+	plan = {}
 	visited_states = []
-	
-	# used to check if a plan was found
-	found = False	
-	cost = {}
 	prev = {}
+	total_cost = {}
 	queve = Queve()
 	start_state_h = inventory_to_tuple(initial)
-
+	found = False
 	# stores the initial cost and any possible previous state
-	total_cost = 0
 	prev[start_state_h] = None
-	cost[start_state_h] = 0
+	total_cost[start_state_h] = 0
 	queve.put(initial,0)
 
 	while not queve.empty() and limit > 0:
+		#print limit
 		limit -= 1
 
 		current_state = queve.get()
 		current_state_t = inventory_to_tuple(current_state)
-		# print "current state" , current_state
+		#print "\ncurrent state" , current_state
 
 
-		if is_goal(current_state):
-			print "reached goal!! "
+		if is_goal(current_state_t):
 			found = True
 			break
 
 		# returns a list of possible states 
 		possible_states =  graph(current_state)
 
-		# retrieves the name , state and the cost of state
 		for v_name,v_state,v_cost in possible_states:
-			alt = cost[current_state_t] + v_cost 
+			#print "possible state:", v_name
+			alt = total_cost[current_state_t] + v_cost 
 			v_t = inventory_to_tuple(v_state)
-			if v_t not in cost or alt < cost[v_t]:
+			if v_t not in total_cost or alt < total_cost[v_t]:
 				priority = alt + heuristic(v_state)
-				prev[v_t] = current_state
-				cost[v_t] = alt
+				prev[v_t] = current_state_t
+				total_cost[v_t] = alt
 				queve.put(v_state,priority)
+				if is_goal(v_t):
+					found = True
+					return total_cost[v_t], traceback(prev, v_t, initial),found
 
+	return total_cost[current_state_t], traceback(prev, current_state_t, initial),found
+
+def traceback(prev, cell, source):
+	path = []
+	print 'cell', cell
+	while cell != None:
+		path.append(cell)
+		print 'cell i', cell
+		cell = prev[cell]
+	return path
 	
-	# if goal is reached then it creates the plan determined by the 
-	# fprward search
-	total_cost = cost[current_state_t]
-	if is_goal(current_state):
-
-		while  prev[current_state_t] != None:
-			plan.append(current_state)
-			current_state = prev[current_state_t]
-			current_state_t = inventory_to_tuple(current_state)
-
-	return total_cost, plan, found
-
-
 def graph(state):
+	# next_state = state
+	# possible_states = []
 
 	for r in all_recipes:
 		if r.check(state):
+			next_state = r.effect(state)
+			#print "next state ",  next_state
 
-			yield (r.name, r.effect(state), r.cost)
+			yield (r.name, next_state, r.cost)
 
 def heuristic(next_state):
-
 	return 0
 
 def main():
+	total_cost, plan, found= search(graph, intitial_state,is_goal,1000,heuristic)
 	
-	# begins the search using A* as the search algorithim 
-	total_cost, plan ,found = search(graph, intitial_state,is_goal,1000,heuristic)
-	
-
+	# if there was a plan found and initial state had nothing 
 	if intitial_state == {} and found:
 		print "Achieve ", Crafting['Goal'], "from scratch. [cost=",total_cost,", len=",len(plan),"]"
 	# if there was not plan found then found will be False 
@@ -219,6 +241,8 @@ def main():
 	else:
 		print "Given ", intitial_state, " achieve ", Crafting['Goal'], "[cost=", total_cost, " len=",len(plan), "]"
 
+	for step in plan:
+		print tuple_to_inventory(step), "\n"
 
 
 
@@ -236,9 +260,3 @@ if __name__ ==  '__main__':
 		recipe = Recipe(name, checker, effector, rule['Time'])
 		all_recipes.append(recipe)
 	main()
-
-
-
-
-
-
