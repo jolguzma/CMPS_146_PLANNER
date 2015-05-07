@@ -25,6 +25,7 @@ def make_item_list(crafting_items):
 	index_of_items = {}
 	count = 0
 	for item in crafting_items:
+
 		index_of_items[item] = count
 		count += 1
 	return index_of_items
@@ -163,6 +164,7 @@ def search(graph, initial, is_goal, limit, heuristic):
 #for each goal item I have, subtract that off of my goal???
 
 	plan = {}
+	print len(plan)
 	visited_states = []
 	prev = {}
 	total_cost = {}
@@ -174,6 +176,10 @@ def search(graph, initial, is_goal, limit, heuristic):
 	total_cost[start_state_h] = 0
 	queve.put(initial,0)
 
+	if is_goal(initial):
+		found = True
+		return total_cost[start_state_h],plan,found
+
 	while not queve.empty() and limit > 0:
 		#print limit
 		limit -= 1
@@ -183,7 +189,7 @@ def search(graph, initial, is_goal, limit, heuristic):
 		#print "\ncurrent state" , current_state
 
 
-		if is_goal(current_state_t):
+		if is_goal(current_state):
 			found = True
 			break
 
@@ -192,7 +198,7 @@ def search(graph, initial, is_goal, limit, heuristic):
 
 		for v_name,v_state,v_cost in possible_states:
 			#print "possible state:", v_name
-			alt = total_cost[current_state_t] + v_cost 
+			alt = total_cost[current_state_t] + v_cost + heuristic(v_state)
 			v_t = inventory_to_tuple(v_state)
 			if v_t not in total_cost or alt < total_cost[v_t]:
 				priority = alt + heuristic(v_state)
@@ -207,10 +213,8 @@ def search(graph, initial, is_goal, limit, heuristic):
 
 def traceback(prev, cell, source):
 	path = []
-	print 'cell', cell
 	while cell != None:
 		path.append(cell)
-		print 'cell i', cell
 		cell = prev[cell]
 	return path
 	
@@ -226,10 +230,12 @@ def graph(state):
 			yield (r.name, next_state, r.cost)
 
 def heuristic(next_state):
+
 	return 0
 
 def main():
-	total_cost, plan, found= search(graph, intitial_state,is_goal,1000,heuristic)
+	total_cost, plan, found= search(graph, intitial_state,is_goal,10000,heuristic)
+	print 
 	
 	# if there was a plan found and initial state had nothing 
 	if intitial_state == {} and found:
@@ -241,8 +247,14 @@ def main():
 	else:
 		print "Given ", intitial_state, " achieve ", Crafting['Goal'], "[cost=", total_cost, " len=",len(plan), "]"
 
-	for step in plan:
-		print tuple_to_inventory(step), "\n"
+	print 
+	
+	if len(plan) > 0:
+
+		for step in reversed(plan):
+			print tuple_to_inventory(step), "\n"
+	elif found:
+		print "Satisifed by initial state"
 
 
 
