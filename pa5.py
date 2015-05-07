@@ -1,6 +1,7 @@
 import json
 import heapq
 import copy
+import sys
 from collections import namedtuple
 
 from math import sqrt
@@ -29,9 +30,21 @@ def make_item_list(crafting_items):
 		index_of_items[item] = count
 		count += 1
 	return index_of_items
+	
+def make_limited_item_list(crafting_items):
+	index_of_items = {}
+	count = 0
+	for item in crafting_items:
+		if item == 'bench' or item == 'furnace' or item == 'iron_pickaxe' or item == 'stone_pickaxe' or item == 'wooden_pickaxe' or item == 'wooden_axe' or item == 'iron_axe' or item == 'stone_axe' or item == 'cart':
+			index_of_items[item] = count
+			count += 1
+	return index_of_items
 
 item_index = make_item_list( Crafting['Items'])
 
+limited_items = make_limited_item_list(Crafting['Items'])
+
+print "Limited items:", limited_items
 
 # returns the initial state of the search
 
@@ -230,7 +243,9 @@ def graph(state):
 			yield (r.name, next_state, r.cost)
 
 def heuristic(next_state):
-
+	for item, quantity in next_state.items():
+		if item in limited_items and quantity > 1:
+			return sys.maxint - 10
 	return 0
 
 def main():
