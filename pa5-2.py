@@ -172,7 +172,7 @@ def search(graph, initial, is_goal, limit, heuristic):
 
 
 		if is_goal(current_state):
-			print "reached goal!! "
+			#print "reached goal!! "
 			break
 
 		# returns a list of possible states 
@@ -194,10 +194,8 @@ def search(graph, initial, is_goal, limit, heuristic):
 
 def traceback(prev, cell, source):
 	path = []
-	print 'cell', cell
 	while cell != None:
 		path.append(cell)
-		print 'cell i', cell
 		cell = prev[cell]
 	return path
 	
@@ -231,8 +229,7 @@ def main():
 	# 	print " printing list: ", n
 	total_cost, plan = search(graph, intitial_state,is_goal,1000,heuristic)
 	print "total cost: ", total_cost
-	print plan
-	for step in plan:
+	for step in reversed(plan):
 		print tuple_to_inventory(step), "\n"
 
 
