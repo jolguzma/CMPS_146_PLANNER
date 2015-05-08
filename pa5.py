@@ -33,7 +33,17 @@ def make_item_list(crafting_items):
 item_index = make_item_list( Crafting['Items'])
 
 
-# returns the initial state of the search
+def make_limited_item_list(crafting_items):
+	index_of_items = {}
+	count = 0
+	for item in crafting_items:
+		if item == 'bench' or item == 'furnace' or item == 'iron_pickaxe' or item == 'stone_pickaxe' or item == 'wooden_pickaxe' or item == 'wooden_axe' or item == 'iron_axe' or item == 'stone_axe' or item == 'cart':
+			index_of_items[item] = count
+			count += 1
+	return index_of_items
+
+
+limited_items = make_limited_item_list(Crafting['Items'])
 
 def make_initial_state(inventory):
 	state = inventory
@@ -164,7 +174,6 @@ def search(graph, initial, is_goal, limit, heuristic):
 #for each goal item I have, subtract that off of my goal???
 
 	plan = {}
-	print len(plan)
 	visited_states = []
 	prev = {}
 	total_cost = {}
@@ -230,6 +239,23 @@ def graph(state):
 			yield (r.name, next_state, r.cost)
 
 def heuristic(next_state):
+	for item, quantity in next_state.items():
+		if item in limited_items  and quantity > 1:
+			return sys.maxint - 10
+		if item == "stick"	and quantity > 6:
+			return sys.maxint - 10
+		if item == "plank"	and quantity > 6:
+			return sys.maxint - 10
+		if item == "wood"	and quantity > 1:
+			return sys.maxint - 10
+		if item == "coal"	and quantity > 1:
+			return sys.maxint - 10
+		if item == "ore"	and quantity > 1:
+			return sys.maxint - 10
+		if item == "cobble"	and quantity > 9:
+			return sys.maxint - 10
+		if item == "bench" and quantity > 2:
+			return sys.maxint - 10
 
 	return 0
 
